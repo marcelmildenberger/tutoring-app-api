@@ -3,6 +3,7 @@ import functions from "firebase-functions";
 import admin from "firebase-admin";
 import express from "express";
 import bodyParser from "body-parser";
+import { getDistance } from "geolib";
 
 //initialize firebase inorder to access its services
 admin.initializeApp(functions.config().firebase);
@@ -113,6 +114,35 @@ app.get("/getProfiles/:uid", async (req, res) => {
     profilesSnapshot.forEach((doc) => {
       result.push({ id: doc.id, ...doc.data() });
     });
+
+    // own proilfe
+    const userQuerySnapshot = await (
+      await db.collection("users").doc(uid).get()
+    ).data();
+
+    await result.sort(
+      (a, b) =>
+        getDistance(
+          {
+            latitude: userQuerySnapshot.geoLocation.latitude,
+            longitude: userQuerySnapshot.geoLocation.longitude,
+          },
+          {
+            latitude: a.geoLocation.latitude,
+            longitude: a.geoLocation.longitude,
+          }
+        ) -
+        getDistance(
+          {
+            latitude: userQuerySnapshot.geoLocation.latitude,
+            longitude: userQuerySnapshot.geoLocation.longitude,
+          },
+          {
+            latitude: b.geoLocation.latitude,
+            longitude: b.geoLocation.longitude,
+          }
+        )
+    );
 
     return res.status(200).json(result);
   } catch (error) {
